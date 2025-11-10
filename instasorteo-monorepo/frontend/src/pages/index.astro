@@ -1,0 +1,106 @@
+---
+import "../styles/global.css";
+const apiUrl = '/api/stats';
+---
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>Sorteo Calendarios de Adviento</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  </head>
+  <body>
+    <div id="conn" class="conn-banner">NO HAY CONEXIÓN</div>
+    <div class="screen">
+      <div class="bg-slideshow"><div></div><div></div><div></div></div>
+      <div class="overlay"></div>
+      <main class="card">
+        <header>
+          <div class="badge">🎄 Sorteo</div>
+          <h1 class="h1">3 Calendarios de Adviento</h1>
+          <p class="sub">
+            🎁 <b>1 Rimmel London</b> – sorteo entre todos los comentarios.<br/>
+            🎁 <b>2 Technic</b> – <b>2 personas que más comenten</b> (cierre día 7 a las 12:00).
+          </p>
+        </header>
+        <section class="grid">
+          <div>
+            <h2 class="h2">Requisitos</h2>
+            <ul>
+              <li>1️⃣ Dale ❤️ a esta publicación.</li>
+              <li>2️⃣ Sígueme.</li>
+              <li>3️⃣ Comenta sin repetir (cada comentario cuenta).</li>
+              <li>4️⃣ Comparte en historias. Usuarios etiquetados válidos (no famosos).</li>
+              <li>Válido: 🇫🇷 🇪🇸 🇧🇪 🇩🇪 🇮🇹 🇱🇺 🇳🇱</li>
+            </ul>
+            <h2 class="h2">Cuenta atrás</h2>
+            <div id="countdown" class="countdown">—</div>
+          </div>
+          <div>
+            <h2 class="h2">Estado</h2>
+            <div class="stat mono" id="total">0</div>
+            <div class="sub">Comentarios válidos</div>
+            <h2 class="h2">Top comentaristas (2)</h2>
+            <ul id="top" class="list"></ul>
+            <h2 class="h2">Ganadores</h2>
+            <ul id="winners" class="list"></ul>
+          </div>
+        </section>
+        <p class="footer">Solo mostramos números y ganadores (no el contenido de los comentarios).</p>
+      </main>
+    </div>
+    <script>
+      const showNoConn = (flag=true) => {
+        const b = document.getElementById('conn');
+        b.className = flag ? 'conn-banner show' : 'conn-banner';
+      };
+      async function load() {
+        try {
+          const res = await fetch('/api/stats', { cache: 'no-store' });
+          if (!res.ok) { showNoConn(true); return; }
+          const data = await res.json();
+          if (data?.error) { showNoConn(true); return; }
+          showNoConn(false);
+
+          const total = document.getElementById('total');
+          total.textContent = Intl.NumberFormat().format(data?.totales?.total_comentarios ?? 0);
+
+          const ulTop = document.getElementById('top');
+          ulTop.innerHTML = '';
+          (data?.top2 ?? []).forEach((r, i) => {
+            const li = document.createElement('li');
+            li.className = 'row';
+            li.innerHTML = `<span>${i+1}. @${r.nick}</span><span class="mono">${r.total_comentarios}</span>`;
+            ulTop.appendChild(li);
+          });
+
+          const ulW = document.getElementById('winners');
+          ulW.innerHTML = '';
+          (data?.ganadores ?? []).forEach((g) => {
+            let label = g.premio === 'RIMMEL_LONDON'
+              ? '🎁 Rimmel (Sorteo)'
+              : `🎁 Technic (Top ${g.posicion_top})`;
+            const li = document.createElement('li');
+            li.className = 'row';
+            li.innerHTML = `<span>${label}</span><span>@${g.nick}</span>`;
+            ulW.appendChild(li);
+          });
+
+          const end = new Date(data?.concurso?.fecha_cierre);
+          const el = document.getElementById('countdown');
+          function tick() {
+            const now = new Date();
+            const diff = end - now;
+            if (diff <= 0) { el.textContent = 'Recuento cerrado'; return; }
+            const d = Math.floor(diff / (1000*60*60*24));
+            const h = Math.floor(diff / (1000*60*60)) % 24;
+            const m = Math.floor(diff / (1000*60)) % 60;
+            const s = Math.floor(diff / 1000) % 60;
+            el.textContent = `${d}d ${h}h ${m}m ${s}s`;
+          }
+          tick(); setInterval(tick, 1000);
+        } catch (e) { console.error(e); showNoConn(true); }
+      }
+      load();
+    </script>
+  </body>
+</html>
